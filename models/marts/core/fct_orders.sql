@@ -3,11 +3,16 @@ with orders as (
 ),
 
 payments as (
+    select *    
+    from {{ ref('stg_payments') }}
+),
+
+order_payments as (
     select 
         order_id,
-
-        sum(amount) as amount
-    from {{ ref('stg_payments') }}
+        sum ( case when payment_status = 'success' then amount end ) as amount
+    
+    from payments
     group by 1
 ),
 
@@ -15,10 +20,10 @@ final as (
     select
         orders.order_id,
         orders.customer_id,
-        payments.amount
+        coalesce (order_payments.amount, 0)
+    
     from orders
-
-    left join payments using (order_id)
+    left join order_payments using (order_id)
 )
 
 select * from final
